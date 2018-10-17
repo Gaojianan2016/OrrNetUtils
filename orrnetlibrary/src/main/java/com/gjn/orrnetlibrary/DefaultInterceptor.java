@@ -2,15 +2,24 @@ package com.gjn.orrnetlibrary;
 
 import android.util.Log;
 
+import com.gjn.orrnetlibrary.utils.JsonUtils;
+
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.Map;
 
 import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.Interceptor;
+import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
+import okhttp3.internal.Util;
+import okio.Buffer;
+import okio.BufferedSource;
 
 /**
  * @author gjn
@@ -37,11 +46,13 @@ public class DefaultInterceptor implements Interceptor {
 
     @Override
     public Response intercept(Chain chain) throws IOException {
-        Headers headers;
-        RequestBody body;
         Request request = chain.request();
         if (onHttpHeadersListener != null) {
-            Map<String, String> heads = onHttpHeadersListener.addRequestHeaders(String.valueOf(request.url()));
+            Map<String, String> oldHeads = new HashMap<>();
+            for (int i = 0; i < request.headers().size(); i++) {
+                oldHeads.put(request.headers().name(i), request.headers().value(i));
+            }
+            Map<String, String> heads = onHttpHeadersListener.addRequestHeaders(String.valueOf(request.url()), oldHeads);
             if (heads != null && heads.size() > 0) {
                 Request.Builder builder = request.newBuilder()
                         .method(request.method(), request.body());
@@ -51,43 +62,75 @@ public class DefaultInterceptor implements Interceptor {
                 request = builder.build();
             }
         }
-        log("============ HTTP START ============");
+        printRequest(request);
         long startTime = System.nanoTime();
-        log("START--> HTTP URL: " + request.url() + " TYPE: " + request.method());
-        headers = request.headers();
-        if (headers.size() > 0) {
-            log("START--> HTTP REQUEST HEAD: ");
-            for (int i = 0; i < headers.size(); i++) {
-                log("START--> " + headers.name(i) + " = " + headers.value(i));
+        Response response = chain.proceed(request);
+        if (response.headers().size() > 0) {
+            if (onHttpHeadersListener != null) {
+                onHttpHeadersListener.getResponseHeader(String.valueOf(response.request().url()), response.headers());
             }
         }
-        body = request.body();
+        printResponse(response, startTime);
+        return response;
+    }
+
+    private long printRequest(Request request) throws IOException {
+        long time = System.nanoTime();
+        log("╔══════════════════════════════════════════════════════════════════════════════════════════════");
+        log("║ --> "+request.method()+" "+request.url());
+        Headers headers = request.headers();
+        if (headers.size() > 0) {
+            log("║ RequestHeaders ");
+            for (int i = 0; i < headers.size(); i++) {
+                log("║ " + headers.name(i) + " : " + headers.value(i));
+            }
+        }
+        RequestBody body = request.body();
         if (body != null) {
-            log("START--> HTTP BODY LENGTH: " + body.contentLength());
+            log("║ BodyType = " + body.contentType());
+            log("║ BodyLenght = " + body.contentLength());
             if (body instanceof FormBody) {
-                log("START--> HTTP REQUEST KEYS: ");
+                log("║ Post Key Value ");
                 for (int i = 0; i < ((FormBody) body).size(); i++) {
-                    log("START--> " + ((FormBody) body).encodedName(i) + "=" + ((FormBody) body).encodedValue(i));
+                    log("║ " + ((FormBody) body).encodedName(i) + " = " + ((FormBody) body).encodedValue(i));
                 }
             }
         }
-        log("============ REQUEST TO RESPONSE ============");
-        Response response = chain.proceed(request);
+        log("║──────────────────────────────────────────────────────────────────────────────────────────────");
+        return time;
+    }
+
+    private void printResponse(Response response, long startTime) throws IOException {
         long endTime = System.nanoTime();
-        log(String.format("END--> %s : %.1fms", response.request().url(), (endTime - startTime) / 1e6d));
-        log("END--> HTTP CODE: " + response.code());
-        headers = response.headers();
+        log(String.format("║ --> %s : %.1fms", response.request().url(), (endTime - startTime) / 1e6d));
+        log("║ --> HttpCode = " + response.code());
+        Headers headers = response.headers();
         if (headers.size() > 0) {
-            log("END--> HTTP RESPONSE HEAD: ");
+            log("║ ResponseHeaders ");
             for (int i = 0; i < headers.size(); i++) {
-                log("END--> " + headers.name(i) + " = " + headers.value(i));
-            }
-            if (onHttpHeadersListener != null) {
-                onHttpHeadersListener.getResponseHeader(String.valueOf(response.request().url()), headers);
+                log("║ " + headers.name(i) + " : " + headers.value(i));
             }
         }
-        log("============ HTTP END ============");
-        return response;
+        log("║──────────────────────────────────────────────────────────────────────────────────────────────");
+        ResponseBody responseBody = response.body();
+        long contentLength = responseBody.contentLength();
+        BufferedSource source = responseBody.source();
+        source.request(Long.MAX_VALUE);
+        Buffer buffer = source.buffer();
+        Charset charset = Util.UTF_8;
+        MediaType contentType = responseBody.contentType();
+        if (contentType != null) {
+            charset = contentType.charset() == null ? Util.UTF_8 : contentType.charset();
+        }
+        if (contentLength != 0) {
+            String result = JsonUtils.decodeUnicode(buffer.clone().readString(charset));
+            log("║ "+result);
+            log("║──────────────────────────────────────────────────────────────────────────────────────────────");
+            if (result.startsWith("{\"")) {
+                log(JsonUtils.formatJson(result));
+            }
+        }
+        log("╚══════════════════════════════════════════════════════════════════════════════════════════════");
     }
 
     private void log(String msg) {
@@ -97,7 +140,7 @@ public class DefaultInterceptor implements Interceptor {
     }
 
     public interface OnHttpHeadersListener{
-        Map<String, String> addRequestHeaders(String url);
+        Map<String, String> addRequestHeaders(String url, Map<String, String> headers);
 
         void getResponseHeader(String url, Headers headers);
     }
