@@ -3,6 +3,7 @@ package com.gjn.orrnetutils;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("-s-", "button");
                 DownLoadManager.getInstance().download(apk, new DownLoadManager.OnDownLoadListener() {
                     @Override
                     public void start(long allSize) {
@@ -74,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("-s-", "button2");
                 OkHttpManager.getInstance().get(gank, new okhttp3.Callback() {
                     @Override
                     public void onFailure(Call call, IOException e) {
@@ -92,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button3).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("-s-", "button3");
                 RetrofitManager.linkOnMainThread(RetrofitManager.create(IApi.BASE_URL, IApi.class).fuli(1, 10),
                         new Consumer<GankResponse>() {
                             @Override

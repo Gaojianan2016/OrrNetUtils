@@ -62,7 +62,8 @@ public class DefaultInterceptor implements Interceptor {
                 request = builder.build();
             }
         }
-        printRequest(request);
+        StringBuilder requestSb = new StringBuilder();
+        requestSb.append(printRequest(request));
         long startTime = System.nanoTime();
         Response response = chain.proceed(request);
         if (response.headers().size() > 0) {
@@ -70,48 +71,52 @@ public class DefaultInterceptor implements Interceptor {
                 onHttpHeadersListener.getResponseHeader(String.valueOf(response.request().url()), response.headers());
             }
         }
-        printResponse(response, startTime);
+        StringBuilder responseSb = new StringBuilder();
+        responseSb.append(printResponse(response, startTime));
+        log(requestSb.toString());
+        log(responseSb.toString());
         return response;
     }
 
-    private long printRequest(Request request) throws IOException {
-        long time = System.nanoTime();
-        log("╔══════════════════════════════════════════════════════════════════════════════════════════════");
-        log("║ --> "+request.method()+" "+request.url());
+    private String printRequest(Request request) throws IOException {
+        StringBuilder log = new StringBuilder();
+        log.append("╔══════════════════════════════════════════════════════════════════════════════════════════════");
+        log.append('\n').append("║ --> "+request.method()+" "+request.url());
         Headers headers = request.headers();
         if (headers.size() > 0) {
-            log("║ RequestHeaders ");
+            log.append('\n').append("║ RequestHeaders ");
             for (int i = 0; i < headers.size(); i++) {
-                log("║ " + headers.name(i) + " : " + headers.value(i));
+                log.append('\n').append("║ " + headers.name(i) + " : " + headers.value(i));
             }
         }
         RequestBody body = request.body();
         if (body != null) {
-            log("║ BodyType = " + body.contentType());
-            log("║ BodyLenght = " + body.contentLength());
+            log.append('\n').append("║ BodyType = " + body.contentType());
+            log.append('\n').append("║ BodyLenght = " + body.contentLength());
             if (body instanceof FormBody) {
-                log("║ Post Key Value ");
+                log.append('\n').append("║ Post Key Value ");
                 for (int i = 0; i < ((FormBody) body).size(); i++) {
-                    log("║ " + ((FormBody) body).encodedName(i) + " = " + ((FormBody) body).encodedValue(i));
+                    log.append('\n').append("║ " + ((FormBody) body).encodedName(i) + " = " + ((FormBody) body).encodedValue(i));
                 }
             }
         }
-        log("║──────────────────────────────────────────────────────────────────────────────────────────────");
-        return time;
+        log.append('\n').append("║──────────────────────────────────────────────────────────────────────────────────────────────");
+        return log.toString();
     }
 
-    private void printResponse(Response response, long startTime) throws IOException {
+    private String printResponse(Response response, long startTime) throws IOException {
+        StringBuilder log = new StringBuilder();
         long endTime = System.nanoTime();
-        log(String.format("║ --> %s : %.1fms", response.request().url(), (endTime - startTime) / 1e6d));
-        log("║ --> HttpCode = " + response.code());
+        log.append(String.format("║ --> %s : %.1fms", response.request().url(), (endTime - startTime) / 1e6d));
+        log.append('\n').append("║ --> HttpCode = " + response.code());
         Headers headers = response.headers();
         if (headers.size() > 0) {
-            log("║ ResponseHeaders ");
+            log.append('\n').append("║ ResponseHeaders ");
             for (int i = 0; i < headers.size(); i++) {
-                log("║ " + headers.name(i) + " : " + headers.value(i));
+                log.append('\n').append("║ " + headers.name(i) + " : " + headers.value(i));
             }
         }
-        log("║──────────────────────────────────────────────────────────────────────────────────────────────");
+        log.append('\n').append("║──────────────────────────────────────────────────────────────────────────────────────────────");
         ResponseBody responseBody = response.body();
         long contentLength = responseBody.contentLength();
         BufferedSource source = responseBody.source();
@@ -125,12 +130,13 @@ public class DefaultInterceptor implements Interceptor {
         if (contentLength != 0) {
             String result = JsonUtils.decodeUnicode(buffer.clone().readString(charset));
             if (result.startsWith("{\"")) {
-                log(JsonUtils.formatJson(result));
+                log.append('\n').append(JsonUtils.formatJson(result));
             }else {
-                log("║ "+result);
+                log.append('\n').append("║ "+result);
             }
         }
-        log("╚══════════════════════════════════════════════════════════════════════════════════════════════");
+        log.append('\n').append("╚══════════════════════════════════════════════════════════════════════════════════════════════");
+        return log.toString();
     }
 
     private void log(String msg) {
