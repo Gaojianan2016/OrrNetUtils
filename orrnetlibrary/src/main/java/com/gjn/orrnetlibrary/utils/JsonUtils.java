@@ -46,6 +46,10 @@ public class JsonUtils {
                         addIndentBlank(sb, indent);
                     }
                     break;
+                case '\n':
+                    sb.append('\n');
+                    addIndentBlank(sb, indent + 1);
+                    break;
                 default:
                     sb.append(current);
             }

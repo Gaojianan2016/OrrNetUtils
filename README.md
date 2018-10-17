@@ -13,7 +13,7 @@ allprojects {
 
 
 dependencies {
-    implementation 'com.github.Gaojianan2016:OrrNetUtils:1.0.1'
+    implementation 'com.github.Gaojianan2016:OrrNetUtils:1.0.2'
 }
 ```
 
