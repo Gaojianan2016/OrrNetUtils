@@ -62,8 +62,6 @@ public class DefaultInterceptor implements Interceptor {
                 request = builder.build();
             }
         }
-        StringBuilder requestSb = new StringBuilder();
-        requestSb.append(printRequest(request));
         long startTime = System.nanoTime();
         Response response = chain.proceed(request);
         if (response.headers().size() > 0) {
@@ -71,17 +69,15 @@ public class DefaultInterceptor implements Interceptor {
                 onHttpHeadersListener.getResponseHeader(String.valueOf(response.request().url()), response.headers());
             }
         }
-        StringBuilder responseSb = new StringBuilder();
-        responseSb.append(printResponse(response, startTime));
-        log(requestSb.toString());
-        log(responseSb.toString());
+        log(printRequest(request) + "\n" + printResponse(response, startTime));
+        log(printResponseBody(response));
         return response;
     }
 
     private String printRequest(Request request) throws IOException {
         StringBuilder log = new StringBuilder();
         log.append("╔══════════════════════════════════════════════════════════════════════════════════════════════");
-        log.append('\n').append("║ --> "+request.method()+" "+request.url());
+        log.append('\n').append("║ --> " + request.method() + " " + request.url());
         Headers headers = request.headers();
         if (headers.size() > 0) {
             log.append('\n').append("║ RequestHeaders ");
@@ -116,9 +112,12 @@ public class DefaultInterceptor implements Interceptor {
                 log.append('\n').append("║ " + headers.name(i) + " : " + headers.value(i));
             }
         }
-        log.append('\n').append("║──────────────────────────────────────────────────────────────────────────────────────────────");
+        log.append('\n').append("╚══════════════════════════════════════════════════════════════════════════════════════════════");
+        return log.toString();
+    }
+
+    private String printResponseBody(Response response) throws IOException {
         ResponseBody responseBody = response.body();
-        long contentLength = responseBody.contentLength();
         BufferedSource source = responseBody.source();
         source.request(Long.MAX_VALUE);
         Buffer buffer = source.buffer();
@@ -127,16 +126,12 @@ public class DefaultInterceptor implements Interceptor {
         if (contentType != null) {
             charset = contentType.charset() == null ? Util.UTF_8 : contentType.charset();
         }
-        if (contentLength != 0) {
-            String result = JsonUtils.decodeUnicode(buffer.clone().readString(charset));
-            if (result.startsWith("{\"")) {
-                log.append('\n').append(JsonUtils.formatJson(result));
-            }else {
-                log.append('\n').append("║ "+result);
-            }
+        String result = JsonUtils.decodeUnicode(buffer.clone().readString(charset));
+        if (result.startsWith("{\"")) {
+            return JsonUtils.formatJson(result);
+        } else {
+            return result;
         }
-        log.append('\n').append("╚══════════════════════════════════════════════════════════════════════════════════════════════");
-        return log.toString();
     }
 
     private void log(String msg) {
@@ -145,7 +140,7 @@ public class DefaultInterceptor implements Interceptor {
         }
     }
 
-    public interface OnHttpHeadersListener{
+    public interface OnHttpHeadersListener {
         Map<String, String> addRequestHeaders(String url, Map<String, String> headers);
 
         void getResponseHeader(String url, Headers headers);
