@@ -124,10 +124,10 @@ public class DefaultInterceptor implements Interceptor {
         }
         if (contentLength != 0) {
             String result = JsonUtils.decodeUnicode(buffer.clone().readString(charset));
-            log("║ "+result);
-            log("║──────────────────────────────────────────────────────────────────────────────────────────────");
             if (result.startsWith("{\"")) {
                 log(JsonUtils.formatJson(result));
+            }else {
+                log("║ "+result);
             }
         }
         log("╚══════════════════════════════════════════════════════════════════════════════════════════════");

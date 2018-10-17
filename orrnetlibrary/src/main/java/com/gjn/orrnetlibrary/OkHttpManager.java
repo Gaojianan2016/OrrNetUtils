@@ -6,6 +6,7 @@ import com.gjn.orrnetlibrary.utils.FileUtils;
 import com.gjn.orrnetlibrary.utils.OkHttpClientFactory;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 
 import okhttp3.Callback;
@@ -75,7 +76,25 @@ public class OkHttpManager {
     }
 
     public void post(String url, Callback callback) {
-        postJson(url, null, callback);
+        postKeys(url, null, callback);
+    }
+
+    public void postJson(String url, Map<String, Object> params, Callback callback) {
+        if (params == null) {
+            params = new HashMap<>();
+        }
+        StringBuilder sb = new StringBuilder("{");
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            if (entry.getValue() instanceof String) {
+                sb.append("\""+entry.getKey()+"\":\""+entry.getValue()+"\",");
+            }else {
+                sb.append("\""+entry.getKey()+"\":"+entry.getValue()+",");
+            }
+        }
+        String json = sb.toString();
+        json = json.substring(0, json.length() - 1);
+        json += "}";
+        postJson(url, json, callback);
     }
 
     public void postJson(String url, String json, Callback callback) {
