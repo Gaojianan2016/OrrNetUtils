@@ -1,23 +1,29 @@
 package com.gjn.orrnetutils;
 
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import com.gjn.orrnetlibrary.DefaultInterceptor;
 import com.gjn.orrnetlibrary.DownLoadManager;
 import com.gjn.orrnetlibrary.OkHttpManager;
 import com.gjn.orrnetlibrary.RetrofitManager;
+import com.gjn.orrnetlibrary.utils.HttpsUtils;
+import com.gjn.orrnetlibrary.utils.OkHttpClientFactory;
 import com.gjn.permissionlibrary.PermissionCallBack;
 import com.gjn.permissionlibrary.PermissionUtils;
 import com.google.gson.Gson;
 
+import java.io.File;
 import java.io.IOException;
 
 import io.reactivex.functions.Consumer;
 import okhttp3.Call;
+import okhttp3.OkHttpClient;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
@@ -26,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
 
     String img = "https://www.baidu.com/img/superlogo_c4d7df0a003d3db9b65e9ef0fe6da1ec.png?where=super";
 
-    String apk = "http://static.gumiss.com/upload/apk/shoumi_latest.apk";
+    String apk = "https://gumi.oss-cn-hangzhou.aliyuncs.com/upload/apk/sort/shoumi_sort_1_1.apk";
 
     String gank = "https://gank.io/api/data/福利/10/1";
 
@@ -46,8 +52,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("-s-", "button");
                 DownLoadManager.getInstance().download(apk, new DownLoadManager.OnDownLoadListener() {
                     @Override
+                    public void startBefore(String name, File file) {
+                        write("准备下载 = " + file.getPath());
+                    }
+
+                    @Override
                     public void start(long allSize) {
-                        write("文件大小 = " + allSize);
+                        add("文件大小 = " + allSize);
                     }
 
                     @Override
@@ -56,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void success() {
+                    public void success(File file) {
                         add("下载成功");
                     }
 
@@ -67,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void download(long size) {
-                        add("下载中 = " + size);
+                        Log.e("-s-", "downloading = " + size);
                     }
                 });
             }
@@ -81,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(Call call, IOException e) {
                         write("OkHttp连接失败" + e.getMessage());
+                        Log.e("-s-", "", e);
                     }
 
                     @Override
@@ -106,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void accept(Throwable throwable) throws Exception {
                                 write("Retrofit连接失败" + throwable.getMessage());
+                                Log.e("-s-", "", throwable);
                             }
                         });
             }

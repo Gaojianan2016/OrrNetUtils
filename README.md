@@ -13,7 +13,7 @@ allprojects {
 
 
 dependencies {
-    implementation 'com.github.Gaojianan2016:OrrNetUtils:1.0.5'
+    implementation 'com.github.Gaojianan2016:OrrNetUtils:1.0.6'
 }
 ```
 
@@ -63,36 +63,42 @@ public class MainActivity extends AppCompatActivity {
         textView = findViewById(R.id.textView);
 
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                DownLoadManager.getInstance().download(apk, new DownLoadManager.OnDownLoadListener() {
                     @Override
-                    public void start(long allSize) {
-                        write("文件大小 = " + allSize);
-                    }
+                    public void onClick(View v) {
+                        Log.e("-s-", "button");
+                        DownLoadManager.getInstance().download(apk, new DownLoadManager.OnDownLoadListener() {
+                            @Override
+                            public void startBefore(String name, File file) {
+                                write("准备下载 = " + file.getPath());
+                            }
 
-                    @Override
-                    public void error(IOException e) {
-                        add("下载错误: " + e.getMessage());
-                    }
+                            @Override
+                            public void start(long allSize) {
+                                add("文件大小 = " + allSize);
+                            }
 
-                    @Override
-                    public void success() {
-                        add("下载成功");
-                    }
+                            @Override
+                            public void error(IOException e) {
+                                add("下载错误: " + e.getMessage());
+                            }
 
-                    @Override
-                    public void fail() {
-                        add("下载失败");
-                    }
+                            @Override
+                            public void success(File file) {
+                                add("下载成功");
+                            }
 
-                    @Override
-                    public void download(long size) {
-                        add("下载中 = " + size);
+                            @Override
+                            public void fail() {
+                                add("下载失败");
+                            }
+
+                            @Override
+                            public void download(long size) {
+                                Log.e("-s-", "downloading = " + size);
+                            }
+                        });
                     }
                 });
-            }
-        });
 
         findViewById(R.id.button2).setOnClickListener(new View.OnClickListener() {
             @Override

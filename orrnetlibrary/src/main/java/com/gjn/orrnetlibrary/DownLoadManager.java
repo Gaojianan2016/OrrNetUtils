@@ -4,12 +4,11 @@ import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
-import com.gjn.orrnetlibrary.utils.OkHttpClientFactory;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -26,6 +25,10 @@ import okhttp3.Response;
 public class DownLoadManager {
     private static final String TAG = "DownLoadManager";
 
+    public static final String SDCARD = "/sdcard/";
+
+    public static int XS = 5;
+
     private static OkHttpClient okHttpClient;
     private static DownLoadManager downLoadManager;
 
@@ -34,7 +37,10 @@ public class DownLoadManager {
             it = new DefaultInterceptor();
         }
         if (okHttpClient == null) {
-            okHttpClient = OkHttpClientFactory.create(it);
+            okHttpClient = new OkHttpClient.Builder()
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .build();
         }
     }
 
@@ -65,7 +71,7 @@ public class DownLoadManager {
     }
 
     public void download(String url, final OnDownLoadListener listener) {
-        String path = "/sdcard/";
+        String path = SDCARD;
         if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
             path = Environment.getExternalStorageDirectory().getPath() + "/";
         }
@@ -77,7 +83,6 @@ public class DownLoadManager {
     }
 
     public void download(String url, String path, String name, final OnDownLoadListener listener) {
-        listener.startBefore();
         Uri uri = Uri.parse(url);
         if (name == null || name.isEmpty()) {
             name = uri.getLastPathSegment();
@@ -101,18 +106,22 @@ public class DownLoadManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        listener.startBefore(name, file);
+        Log.d(TAG, "linkStart -> " + url);
         okHttpClient.newCall(new Request.Builder().url(url).build())
                 .enqueue(new Callback() {
                     @Override
                     public void onFailure(Call call, IOException e) {
+                        Log.d(TAG, "linkFailure...");
                         listener.fail();
                         listener.error(e);
                     }
 
                     @Override
                     public void onResponse(Call call, Response response) throws IOException {
+                        Log.d(TAG, "linkResponse...");
                         if (downloadStream(response, file, listener)) {
-                            listener.success();
+                            listener.success(file);
                         } else {
                             listener.fail();
                         }
@@ -159,26 +168,27 @@ public class DownLoadManager {
     }
 
     private int getDownLoadLen(int allSize) {
+        int len = 1024;
         if (allSize > 1024 * 500) {
-            return 1024 * 20;
+            len = 1024 * 20;
         } else if (allSize > 1024 * 100) {
-            return 1024 * 10;
+            len = 1024 * 10;
         } else if (allSize > 1024 * 50) {
-            return 1024 * 5;
+            len = 1024 * 5;
         } else if (allSize > 1024 * 10) {
-            return 1024 * 2;
+            len = 1024 * 2;
         }
-        return 1024;
+        return len * XS;
     }
 
     public static abstract class OnDownLoadListener{
-        public void startBefore(){}
+        public void startBefore(String name, File file){}
 
         public void start(long allSize){}
 
         public void error(IOException e){}
 
-        public void success(){}
+        public void success(File file){}
 
         public void fail(){};
 
